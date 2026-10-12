@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>测控日志 - 航天级高可靠网络深潜专栏 | 渔云加速器 测控日志</title>
+  <meta name="description" content="渔云加速器测控日志，深入探索航天遥感冗余网络架构、TCP拥塞控制BBR算法、OBS跨洋直播推流、客户端工具链及企业混合云SD-WAN技术实战。">
+  <style>
+    :root {
+      --bg-space: #090e1f;
+      --bg-module: #111a36;
+      --bg-module-hover: #18254b;
+      --color-titanium: #cfd8dc;
+      --color-white: #ffffff;
+      --color-orange: #ff6f00;
+      --color-telemetry: #8395a7;
+      --border-hull: #1d2c54;
+      --font-hull: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg-space);
+      color: var(--color-titanium);
+      font-family: var(--font-hull);
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Nav */
+    .aero-nav-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 14, 31, 0.96);
+      border-bottom: 1px solid var(--border-hull);
+      backdrop-filter: blur(10px);
+    }
+    .aero-nav-box {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .aero-brand-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .aero-logo-svg {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+    .aero-title-grp {
+      display: flex;
+      flex-direction: column;
+    }
+    .aero-name {
+      font-size: 21px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      color: var(--color-white);
+    }
+    .aero-tagline {
+      font-size: 11px;
+      color: var(--color-telemetry);
+      letter-spacing: 1.2px;
+    }
+    .aero-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      list-style: none;
+    }
+    .aero-nav-links a {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-telemetry);
+      transition: color 0.2s;
+    }
+    .aero-nav-links a:hover, .aero-nav-links a.active {
+      color: var(--color-orange);
+    }
+    .aero-login-btn {
+      background: var(--color-orange);
+      color: #fff;
+      font-size: 13.5px;
+      font-weight: 800;
+      padding: 9px 24px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 14px rgba(255, 111, 0, 0.3);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .aero-login-btn:hover {
+      background: #e66300;
+      transform: translateY(-1px);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+    .tele-head-pod {
+      text-align: center;
+      padding: 40px 0 50px;
+      margin-bottom: 45px;
+      border-bottom: 1px solid var(--border-hull);
+    }
+    .tele-tag-pill {
+      display: inline-block;
+      background: rgba(255, 111, 0, 0.12);
+      color: var(--color-orange);
+      border: 1px solid rgba(255, 111, 0, 0.3);
+      padding: 3px 12px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+    }
+    .tele-h1 {
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--color-white);
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .tele-sub-text {
+      color: var(--color-telemetry);
+      font-size: 15.5px;
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.75;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 30px;
+    }
+    .aero-card {
+      background: var(--bg-module);
+      border: 1px solid var(--border-hull);
+      border-radius: 8px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s;
+    }
+    .aero-card:hover {
+      background: var(--bg-module-hover);
+      border-color: var(--color-orange);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+    }
+    .aero-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--color-telemetry);
+      margin-bottom: 14px;
+    }
+    .aero-badge {
+      background: rgba(255, 111, 0, 0.15);
+      color: var(--color-orange);
+      padding: 2px 8px;
+      border-radius: 2px;
+      font-weight: 800;
+      font-size: 11.5px;
+    }
+    .aero-card-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--color-white);
+      margin-bottom: 12px;
+      line-height: 1.45;
+    }
+    .aero-card-excerpt {
+      font-size: 14.5px;
+      color: var(--color-telemetry);
+      line-height: 1.7;
+      margin-bottom: 24px;
+      flex-grow: 1;
+    }
+    .aero-read-btn {
+      color: var(--color-orange);
+      font-weight: 800;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Article Specific */
+    .aero-crumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      color: var(--color-telemetry);
+      margin-bottom: 30px;
+    }
+    .aero-crumb a:hover { color: var(--color-orange); }
+    .article-header-deck {
+      margin-bottom: 35px;
+      padding-bottom: 25px;
+      border-bottom: 1px solid var(--border-hull);
+    }
+    .article-h1 {
+      font-size: 34px;
+      font-weight: 900;
+      color: var(--color-white);
+      line-height: 1.35;
+      margin-bottom: 18px;
+    }
+    .article-meta-deck {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-size: 13px;
+      color: var(--color-telemetry);
+      flex-wrap: wrap;
+    }
+    .article-hull-box {
+      background: var(--bg-module);
+      border: 1px solid var(--border-hull);
+      border-radius: 12px;
+      padding: 50px;
+      font-size: 16px;
+      line-height: 1.85;
+      color: #b0bec5;
+    }
+    .article-hull-box h2 {
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--color-white);
+      margin: 40px 0 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-hull);
+    }
+    .article-hull-box h2:first-child { margin-top: 0; }
+    .article-hull-box h3 {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--color-titanium);
+      margin: 28px 0 14px;
+    }
+    .article-hull-box p {
+      margin-bottom: 22px;
+      text-align: justify;
+    }
+    .article-hull-box ul, .article-hull-box ol {
+      margin: 0 0 24px 24px;
+    }
+    .article-hull-box li {
+      margin-bottom: 10px;
+    }
+
+    /* Dedicated Orange Hyperlink Styling */
+    .content-link, .content-link:visited {
+      color: var(--color-orange) !important;
+      font-weight: 700;
+      text-decoration: underline !important;
+      text-underline-offset: 4px;
+      transition: opacity 0.2s;
+    }
+    .content-link:hover {
+      opacity: 0.85;
+    }
+
+    .article-foot-deck {
+      margin-top: 50px;
+      padding-top: 25px;
+      border-top: 1px dashed var(--border-hull);
+      font-size: 13.5px;
+      color: var(--color-telemetry);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    /* Footer */
+    .strict-footer-aero {
+      background: #050811;
+      border-top: 1px solid var(--border-hull);
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .footer-four-aero {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 36px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .footer-four-aero a {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--color-telemetry);
+      transition: color 0.2s;
+    }
+    .footer-four-aero a:hover { color: var(--color-white); }
+    .footer-aero-copy {
+      font-size: 12.5px;
+      color: #546e7a;
+    }
+
+    @media (max-width: 860px) {
+      .aero-nav-links { display: none; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .article-hull-box { padding: 28px 20px; }
+      .article-h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Nav -->
+  <header class="aero-nav-bar">
+    <div class="aero-nav-box">
+      <a href="index.html" class="aero-brand-box">
+        <svg class="aero-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 14 L80 26 V54 C80 72 50 86 50 86 C50 86 20 72 20 54 V26 L50 14 Z" stroke="#cfd8dc" stroke-width="2.5" fill="#111a36"/>
+          <path d="M30 40 Q 50 15 70 35" stroke="#ff6f00" stroke-width="2"/>
+          <polygon points="40,55 58,45 68,55 58,65" fill="#cfd8dc"/>
+          <polygon points="40,55 30,48 32,62" fill="#ff6f00"/>
+          <circle cx="62" cy="53" r="2" fill="#090e1f"/>
+        </svg>
+        <div class="aero-title-grp">
+          <div class="aero-name">渔云加速器</div>
+          <div class="aero-tagline">钛金深潜·航天遥感级专线</div>
+        </div>
+      </a>
+
+      <nav>
+        <ul class="aero-nav-links">
+          <li><a href="index.html#advantages">钛金优势</a></li>
+          <li><a href="index.html#streaming">全域解锁</a></li>
+          <li><a href="index.html#pricing">测控套餐</a></li>
+          <li><a href="index.html#faq">任务答疑</a></li>
+          <li><a href="index.html#reviews">领航反馈</a></li>
+          <li><a href="telemetry.html" class="active">测控日志</a></li>
+        </ul>
+      </nav>
+
+      <a href="https://ww012.twilightaff.com/#/?code=A56DH1Af" target="_blank" rel="nofollow" class="aero-login-btn">
+        登录中继站
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="tele-head-pod">
+      <div class="tele-tag-pill">TELEMETRY & DEEP DIVE</div>
+      <h1 class="tele-h1">测控日志</h1>
+      <p class="tele-sub-text">
+        以航天遥感级工程严谨性审视全球骨干互联。收录硬核网络架构剖析、传输协议调优实战、跨洋推流容灾及企业云网互联深度技术白皮书。
+      </p>
+    </div>
+
+    <section class="cards-grid">
+
+      <article class="aero-card">
+        <div class="aero-card-meta">
+          <span class="aero-badge">遥感架构深析</span>
+          <span>2026-10-12</span>
+          <span>•</span>
+          <span>遥感测控工程组</span>
+        </div>
+        <h2 class="aero-card-title"><a href="yuyun-telemetry-architecture-deepdive.html">渔云加速器硬核架构剖析：航天遥感级高冗余网络与钛金深潜专线实测</a></h2>
+        <p class="aero-card-excerpt">拒绝单点故障，构建防熔断的硬核数字通道。本文从系统工程角度，全面拆解渔云加速器钛金深潜骨干专线的底层冗余抗毁拓扑。</p>
+        <a href="yuyun-telemetry-architecture-deepdive.html" class="aero-read-btn">调取日志 &rarr;</a>
+      </article>
+      <article class="aero-card">
+        <div class="aero-card-meta">
+          <span class="aero-badge">协议算法深研</span>
+          <span>2026-10-10</span>
+          <span>•</span>
+          <span>内核协议工程师</span>
+        </div>
+        <h2 class="aero-card-title"><a href="tcp-congestion-control-algorithms-bbr.html">网络拥塞控制算法大比拼：BBRv1、BBRv3与Cubic在高丢包链路中的表现</a></h2>
+        <p class="aero-card-excerpt">为什么网络带宽很大下载却依然龟速？本文从 TCP 拥塞控制底层数学模型出发，全面解析 BBR 算法如何颠覆跨国传输性能。</p>
+        <a href="tcp-congestion-control-algorithms-bbr.html" class="aero-read-btn">调取日志 &rarr;</a>
+      </article>
+      <article class="aero-card">
+        <div class="aero-card-meta">
+          <span class="aero-badge">直播推流实战</span>
+          <span>2026-10-08</span>
+          <span>•</span>
+          <span>出海直播技术流</span>
+        </div>
+        <h2 class="aero-card-title"><a href="cross-border-livestream-obs-streaming.html">跨境直播与推流技术实操：OBS海外多平台推流防丢帧断流实操指南</a></h2>
+        <p class="aero-card-excerpt">海外直播带货突然卡顿掉线导致观众大量流失？本文为你详解 OBS 跨洋超高码率推流防丢帧的核心配置与双通道容灾架构。</p>
+        <a href="cross-border-livestream-obs-streaming.html" class="aero-read-btn">调取日志 &rarr;</a>
+      </article>
+      <article class="aero-card">
+        <div class="aero-card-meta">
+          <span class="aero-badge">客户端工具链</span>
+          <span>2026-10-06</span>
+          <span>•</span>
+          <span>客户端测评专家</span>
+        </div>
+        <h2 class="aero-card-title"><a href="proxy-clients-ecosystem-feature-matrix.html">现代网络客户端技术深度盘点：Clash Verge、Surge与Loon生态对比</a></h2>
+        <p class="aero-card-excerpt">Windows、Mac、iOS 与 Android 平台上五花八门的代理客户端到底孰优孰劣？本文带你全景拆解各家核心功能与适用场景。</p>
+        <a href="proxy-clients-ecosystem-feature-matrix.html" class="aero-read-btn">调取日志 &rarr;</a>
+      </article>
+      <article class="aero-card">
+        <div class="aero-card-meta">
+          <span class="aero-badge">企业云网互联</span>
+          <span>2026-10-04</span>
+          <span>•</span>
+          <span>企业云架构师</span>
+        </div>
+        <h2 class="aero-card-title"><a href="enterprise-hybrid-cloud-sdwan-tunneling.html">企业混合云跨国互联方案：SD-WAN与IPSec专线构建跨地域协同网络</a></h2>
+        <p class="aero-card-excerpt">跨国分支机构与公有云数据互通成本高昂？本文详解现代 SD-WAN 与加密隧道网络架构，为出海企业打造高性价比协同专网。</p>
+        <a href="enterprise-hybrid-cloud-sdwan-tunneling.html" class="aero-read-btn">调取日志 &rarr;</a>
+      </article>
+      <article class="aero-card">
+        <div class="aero-card-meta">
+          <span class="aero-badge">流量混淆前沿</span>
+          <span>2026-10-01</span>
+          <span>•</span>
+          <span>网络攻防极客</span>
+        </div>
+        <h2 class="aero-card-title"><a href="deep-packet-inspection-evasion-techniques.html">防封锁混淆与主动探测防御：浅析现代深度包检测（DPI）对抗技术</a></h2>
+        <p class="aero-card-excerpt">单纯加密已不足以对抗现代防火墙。本文从底层报文分析出发，带你深入了解 DPI 流量特征审计与借壳伪装协议的前沿对抗逻辑。</p>
+        <a href="deep-packet-inspection-evasion-techniques.html" class="aero-read-btn">调取日志 &rarr;</a>
+      </article>
+    </section>
+  </main>
+
+  <!-- Strict Footer: ONLY 4 titles -->
+  <footer class="strict-footer-aero">
+    <div class="footer-four-aero">
+      <a href="sitemap.html" target="_blank">网站地图</a>
+      <a href="about.html" target="_blank">关于我们</a>
+      <a href="terms.html" target="_blank">服务条款</a>
+      <a href="privacy.html" target="_blank">隐私政策</a>
+    </div>
+    <div class="footer-aero-copy">
+      &copy; 2026 渔云加速器 yuyuncloud.mom 版权所有 | 钛金深潜航天遥感专线网络
+    </div>
+  </footer>
+
+</body>
+</html>
